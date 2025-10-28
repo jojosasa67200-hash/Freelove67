@@ -1,3 +1,7 @@
+app.py
+README.md
+templates/
+static/
 Flask==3.0.3
 gunicorn==21.2.0
 itsdangerous==2.2.0
