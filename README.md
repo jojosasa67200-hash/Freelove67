@@ -106,3 +106,4 @@ nav a {
   text-decoration: none;
   font-weight: bold;
 }
+requirements.txt
