@@ -1,3 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Personnes près de toi</h1>
+<div class="row">
+  {% for u in users %}
+    <div class="col-md-4">
+      <div class="card mb-3">
+        {% if u.photo %}
+          <img src="{{ url_for('uploaded_file', filename=u.photo) }}" class="card-img-top" alt="photo">
+        {% endif %}
+        <div class="card-body">
+          <h5 class="card-title">{{ u.pseudo or 'Utilisateur' }}</h5>
+          <p class="card-text">{{ u.city or '' }}</p>
+          <p class="card-text">{{ (u.bio[:100] + '...') if u.bio else '' }}</p>
+          <a class="btn btn-sm btn-primary" href="{{ url_for('profile', user_id=u.id) }}">Voir</a>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
 <!doctype html>
 <html>
 <head>
