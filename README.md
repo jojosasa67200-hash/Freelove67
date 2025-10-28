@@ -1,3 +1,79 @@
+import sqlite3
+from sqlite3 import Connection
+import bcrypt
+
+DB = 'dating.db'
+
+def get_conn() -> Connection:
+    conn = sqlite3.connect(DB, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_conn()
+    c = conn.cursor()
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      pseudo TEXT,
+      city TEXT,
+      bio TEXT,
+      photo TEXT
+    )
+    """)
+    conn.commit()
+    conn.close()
+
+def create_user(email, password, pseudo=None, city=None):
+    pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    conn = get_conn()
+    conn.execute("INSERT INTO users (email, password_hash, pseudo, city) VALUES (?, ?, ?, ?)",
+                 (email, pw, pseudo, city))
+    conn.commit()
+    conn.close()
+
+def get_user_by_email(email):
+    conn = get_conn()
+    r = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    conn.close()
+    return dict(r) if r else None
+
+def get_user_by_id(uid):
+    conn = get_conn()
+    r = conn.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone()
+    conn.close()
+    return dict(r) if r else None
+
+def verify_user_credentials(email, password):
+    u = get_user_by_email(email)
+    if not u:
+        return None
+    if bcrypt.checkpw(password.encode(), u['password_hash'].encode()):
+        return u
+    return None
+
+def update_profile(user_id, pseudo, city, bio, photo_filename=None):
+    conn = get_conn()
+    if photo_filename:
+        conn.execute("UPDATE users SET pseudo=?, city=?, bio=?, photo=? WHERE id=?",
+                     (pseudo, city, bio, photo_filename, user_id))
+    else:
+        conn.execute("UPDATE users SET pseudo=?, city=?, bio=? WHERE id=?",
+                     (pseudo, city, bio, user_id))
+    conn.commit()
+    conn.close()
+
+def list_local_users(current_user_id=None, limit=50):
+    conn = get_conn()
+    if current_user_id:
+        rows = conn.execute("SELECT id, pseudo, city, bio, photo FROM users WHERE id != ? LIMIT ?",
+                            (current_user_id, limit)).fetchall()
+    else:
+        rows = conn.execute("SELECT id, pseudo, city, bio, photo FROM users LIMIT ?", (limit,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 import os
 from flask import Flask, render_template, redirect, url_for, flash, request, send_from_directory, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
