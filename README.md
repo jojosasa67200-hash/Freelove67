@@ -1,6 +1,6 @@
 freelove67/
 ├─ app.py
-├─ requirements.tx
+├─ requirements.txt
 ├─ README.md
 ├─ templates/
 │  └─ index.html
