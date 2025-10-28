@@ -98,3 +98,23 @@ h1 {
 }
 // Script FreeLove (vide pour le moment)
 console.log("FreeLove chargé !");
+# Dockerfile pour Render / Flask
+FROM python:3.12-slim
+
+# Crée un dossier de travail
+WORKDIR /app
+
+# Copie les fichiers
+COPY . .
+
+# Installe les dépendances
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Définit la variable d'environnement Flask
+ENV FLASK_APP=app.py
+
+# Expose le port
+EXPOSE 10000
+
+# Commande de lancement
+CMD ["gunicorn", "--bind", "0.0.0.0:10000", "app:app"]
