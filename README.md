@@ -1,3 +1,9 @@
+Flask==3.0.3
+gunicorn==21.2.0
+itsdangerous==2.2.0
+Jinja2==3.1.3
+Werkzeug==3.0.2
+requirements.txt
 python app.py
 pip install -r requirements.txt
 python -m venv venv
