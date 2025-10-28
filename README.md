@@ -1,3 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rencontres Locales</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light mb-3">
+  <div class="container">
+    <a class="navbar-brand" href="{{ url_for('index') }}">Rencontres Locales</a>
+    <div>
+      {% if current_user.is_authenticated %}
+        <a class="btn btn-outline-primary btn-sm" href="{{ url_for('me') }}">Mon profil</a>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('logout') }}">Déconnexion</a>
+      {% else %}
+        <a class="btn btn-primary btn-sm" href="{{ url_for('login') }}">Connexion</a>
+        <a class="btn btn-success btn-sm" href="{{ url_for('register') }}">Inscription</a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+<div class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }}">{{ msg }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</div>
+</body>
+</html>
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Email, Length, Optional
