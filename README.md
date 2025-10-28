@@ -107,3 +107,10 @@ nav a {
   font-weight: bold;
 }
 requirements.txt
+Flask==3.0.3
+Flask-Login==0.6.3
+Flask-WTF==1.1.1
+Flask-Limiter==2.9.0
+bcrypt==4.0.1
+python-dotenv==1.0.0
+gunicorn==21.2.0
