@@ -1,3 +1,6 @@
+python -m venv venv
+source venv/bin/activate   # mac/linux
+venv\Scripts\activate      # windows
 {% extends "base.html" %}
 {% block content %}
 <h1>Personnes près de toi</h1>
