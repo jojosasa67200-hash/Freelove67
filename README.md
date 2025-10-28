@@ -29,223 +29,18 @@ Flask-WTF==1.1.1
 bcrypt==4.0.1
 Flask-Limiter==2.9.0
 python-dotenv==1.0.0
-import os
-from datetime import datetime
-from flask import Flask, render_template, redirect, url_for, flash, request, send_from_directory, abort, jsonify
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from werkzeug.utils import secure_filename
-from models import (
-    init_db, get_user_by_email, create_user, verify_user_credentials, get_user_by_id,
-    update_profile, list_local_users, like_user, get_like, create_match_if_eligible,
-    get_matches_for_user, get_messages_for_match, create_message, list_users_filtered,
-    get_match_between
-)
-from forms import RegistrationForm, LoginForm, ProfileForm, SearchForm, MessageForm
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-
-# Config
-UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXT = {'png', 'jpg', 'jpeg'}
-MAX_CONTENT_LENGTH = 2 * 1024 * 1024  # 2MB
+from flask import Flask
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-me-very-secret')
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Rate limiting
-limiter = Limiter(app, key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
+@app.route("/")
+def home():
+    return "FreeLove fonctionne 🎉"
 
-# Login
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
-# init DB
-init_db()
-
-class UserObj:
-    def __init__(self, id, email):
-        self.id = id
-        self.email = email
-
-    def is_authenticated(self):
-        return True
-
-    def is_active(self):
-        return True
-
-    def is_anonymous(self):
-        return False
-
-    def get_id(self):
-        return str(self.id)
-
-@login_manager.user_loader
-def load_user(user_id):
-    u = get_user_by_id(int(user_id))
-    if not u:
-        return None
-    return UserObj(u['id'], u['email'])
-
-@app.route('/')
-def index():
-    # show local users if logged
-    users = []
-    if current_user.is_authenticated:
-        users = list_local_users(current_user_id=int(current_user.get_id()))
-    return render_template('index.html', users=users, zone="Alsace", name="Freelove")
-
-@app.route('/register', methods=['GET','POST'])
-@limiter.limit("10 per hour")
-def register():
-    form = RegistrationForm()
-    if form.validate_on_submit():
-        if get_user_by_email(form.email.data):
-            flash('Email déjà utilisé.', 'danger')
-            return redirect(url_for('register'))
-        create_user(
-            email=form.email.data,
-            password=form.password.data,
-            pseudo=form.pseudo.data,
-            city=form.city.data,
-            age=form.age.data,
-            gender=form.gender.data,
-            pref_gender=form.pref_gender.data,
-            interests=form.interests.data
-        )
-        flash('Compte créé. Connecte-toi.', 'success')
-        return redirect(url_for('login'))
-    return render_template('register.html', form=form)
-
-@app.route('/login', methods=['GET','POST'])
-@limiter.limit("20 per hour")
-def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = verify_user_credentials(form.email.data, form.password.data)
-        if user:
-            login_user(UserObj(user['id'], user['email']))
-            flash('Connecté.', 'success')
-            return redirect(url_for('index'))
-        flash('Email ou mot de passe invalide.', 'danger')
-    return render_template('login.html', form=form)
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    flash('Déconnecté.', 'info')
-    return redirect(url_for('index'))
-
-@app.route('/me', methods=['GET','POST'])
-@login_required
-def me():
-    u = get_user_by_id(int(current_user.get_id()))
-    form = ProfileForm(data=u)
-    if form.validate_on_submit():
-        # handle upload
-        filename = None
-        file = request.files.get('photo')
-        if file and file.filename:
-            ext = file.filename.rsplit('.', 1)[-1].lower()
-            if ext not in ALLOWED_EXT:
-                flash('Format d\'image non autorisé (jpg/png).', 'danger')
-                return redirect(url_for('me'))
-            filename = secure_filename(f"{current_user.get_id()}_{int(datetime.utcnow().timestamp())}.{ext}")
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        update_profile(
-            user_id=current_user.get_id(),
-            pseudo=form.pseudo.data,
-            city=form.city.data,
-            bio=form.bio.data,
-            photo=filename,
-            age=form.age.data,
-            gender=form.gender.data,
-            pref_gender=form.pref_gender.data,
-            interests=form.interests.data
-        )
-        flash('Profil mis à jour.', 'success')
-        return redirect(url_for('me'))
-    return render_template('edit_profile.html', form=form, u=u)
-
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-@app.route('/search', methods=['GET','POST'])
-@login_required
-def search():
-    form = SearchForm()
-    results = []
-    if form.validate_on_submit():
-        results = list_users_filtered(
-            current_user_id=int(current_user.get_id()),
-            city=form.city.data,
-            interests=form.interests.data
-        )
-    return render_template('search.html', form=form, results=results)
-
-@app.route('/profile/<int:user_id>', methods=['GET'])
-@login_required
-def profile(user_id):
-    target = get_user_by_id(user_id)
-    if not target:
-        abort(404)
-    # compute current points between current_user and target
-    match = get_match_between(int(current_user.get_id()), user_id)
-    can_see_photo = False
-    if match:
-        can_see_photo = True
-    else:
-        # compute points but do not reveal photo unless >=10 AND match exists (mutual likes)
-        # We'll compute points for display
-        from models import compute_points_between
-        points = compute_points_between(int(current_user.get_id()), user_id)
-        can_see_photo = points >= 10 and False  # photo revealed only after match; keep False
-    # get like status
-    like = get_like(int(current_user.get_id()), user_id)
-    likes_enabled = True
-    return render_template('profile.html', u=target, can_see_photo=can_see_photo, like=like)
-
-@app.route('/like/<int:user_id>', methods=['POST'])
-@login_required
-@limiter.limit("30 per day")
-def like(user_id):
-    if int(user_id) == int(current_user.get_id()):
-        return jsonify({"error": "Impossible de vous liker vous-même."}), 400
-    like_user(int(current_user.get_id()), user_id)
-    # attempt create match
-    matched = create_match_if_eligible(int(current_user.get_id()), user_id)
-    return jsonify({"ok": True, "matched": bool(matched)})
-
-@app.route('/matches')
-@login_required
-def matches():
-    ms = get_matches_for_user(int(current_user.get_id()))
-    return render_template('inbox.html', matches=ms)
-
-@app.route('/messages/<int:match_id>', methods=['GET','POST'])
-@login_required
-def messages(match_id):
-    # verify match exists and current user is a participant
-    from models import get_match
-    m = get_match(match_id)
-    if not m or (int(current_user.get_id()) not in (m['user1'], m['user2'])):
-        abort(403)
-    form = MessageForm()
-    if form.validate_on_submit():
-        create_message(match_id, int(current_user.get_id()), form.content.data)
-        return redirect(url_for('messages', match_id=match_id))
-    msgs = get_messages_for_match(match_id)
-    other_id = m['user1'] if m['user2'] == int(current_user.get_id()) else m['user2']
-    other = get_user_by_id(other_id)
-    return render_template('messages.html', messages=msgs, form=form, other=other)
-
-if __name__ == '__main__':
-    app.run(ssl_context='adhoc', debug=True)
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
 import sqlite3
 from sqlite3 import Connection
 import bcrypt
@@ -716,6 +511,7 @@ source venv/bin/activate   # mac/linux
 venv\Scripts\activate      # windows
 pip install -r requirements.txt
 python -c "from models import init_db; init_db()"
+python app.py
 freelove/
 ├── app.py                # Application principale Flask
 ├── models.py             # Base de données et fonctions utilisateur
@@ -737,15 +533,3 @@ git push -u origin main
 git add .
 git commit -m "Préparation déploiement"
 git push origin main
-from flask import Flask
-
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    return "FreeLove fonctionne 🎉"
-
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
