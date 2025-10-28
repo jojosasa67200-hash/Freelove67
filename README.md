@@ -37,6 +37,8 @@ if __name__ == "__main__":
 
 
 Flask==3.0.3
+gunicorn==21.2.0
+
 Flask-Login==0.6.3
 Flask-WTF==1.1.1
 Flask-Limiter==2.9.0
