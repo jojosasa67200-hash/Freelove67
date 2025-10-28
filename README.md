@@ -1,5 +1,3 @@
-#Freelove67
-site de rencontre
 freelove67/
 ├─ app.py
 ├─ requirements.txt
