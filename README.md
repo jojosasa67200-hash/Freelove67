@@ -1,3 +1,24 @@
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField, TextAreaField
+from wtforms.validators import DataRequired, Email, Length, Optional
+
+class RegistrationForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Mot de passe', validators=[DataRequired(), Length(min=8)])
+    pseudo = StringField('Pseudo', validators=[Optional(), Length(max=50)])
+    city = StringField('Ville / CP', validators=[Optional(), Length(max=100)])
+    submit = SubmitField('Créer')
+
+class LoginForm(FlaskForm):
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Mot de passe', validators=[DataRequired()])
+    submit = SubmitField('Se connecter')
+
+class ProfileForm(FlaskForm):
+    pseudo = StringField('Pseudo', validators=[Optional(), Length(max=50)])
+    city = StringField('Ville / CP', validators=[Optional(), Length(max=100)])
+    bio = TextAreaField('Bio', validators=[Optional(), Length(max=500)])
+    submit = SubmitField('Enregistrer')
 import sqlite3
 from sqlite3 import Connection
 import bcrypt
