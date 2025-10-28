@@ -1,6 +1,6 @@
 #Freelove67
 site de rencontre
-freelove/
+freelove67/
 ├─ app.py
 ├─ models.py
 ├─ forms.py
