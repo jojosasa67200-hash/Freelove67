@@ -34,6 +34,7 @@ def index():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
 Flask==3.0.3
 Flask-Login==0.6.3
 Flask-WTF==1.1.1
